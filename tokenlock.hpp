@@ -12,13 +12,13 @@ class [[eosio::contract]] tokenlock : public contract {
         : contract(receiver, code, ds),
         _lockups(receiver, code.value) {}
         
-    const name TOKEN_CONTRACT = "osb.token"_n;
+    const name TOKEN_CONTRACT = "osbio.token"_n;
     
     [[eosio::action]] void transferlock(name from,
                       name to,
                       asset quantity,
                       string memo,
-                      uint64_t lock_days);
+                      uint64_t unlock_timestamp);
     [[eosio::action]] void claim(name receiver);
     [[eosio::action]] void currenttime();
     
@@ -29,8 +29,8 @@ class [[eosio::contract]] tokenlock : public contract {
         name receiver;
         asset token;
         string memo;
-        uint32_t lock_begin = 0;
-        uint32_t lock_end = 0;
+        uint64_t lock_begin = 0;
+        uint64_t lock_end = 0;
         uint64_t primary_key() const { return no; }
     };
     

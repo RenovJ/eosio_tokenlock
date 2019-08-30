@@ -1,6 +1,8 @@
 #include "tokenlock.hpp"
 #include <eosio/eosio.hpp>
 #include <stdio.h>
+#include <ctime>
+#include <time.h>
 
 using namespace eosio;
 using namespace std;
@@ -12,7 +14,7 @@ void tokenlock::transferlock(name from,
                   name to,
                   asset quantity,
                   string memo,
-                  uint64_t lock_days) {
+                  uint64_t unlock_timestamp) {
 
   eosio_assert( from != to, "cannot transfer to self" );
   require_auth( from );
@@ -24,6 +26,7 @@ void tokenlock::transferlock(name from,
   eosio_assert( quantity.is_valid(), "invalid symbol" );
   eosio_assert( quantity.amount > 0, "must transfer positive quantity" );
   eosio_assert( memo.size() <= 256, "memo has more than 256 bytes" );
+  eosio_assert( unlock_timestamp > current_time_point().sec_since_epoch(), "unlock_timestamp must be future" );
   
   action(
      permission_level{from, "active"_n},
@@ -39,7 +42,8 @@ void tokenlock::transferlock(name from,
     l.token = quantity;
     l.memo = memo;
     l.lock_begin = current_time_point().sec_since_epoch();
-    l.lock_end = current_time_point().sec_since_epoch() + lock_days * 86400; // day in milliseconds
+    //l.lock_end = current_time_point().sec_since_epoch() + lock_days * 86400; // day in milliseconds
+    l.lock_end = unlock_timestamp;
   });
 }
   
@@ -82,7 +86,7 @@ void tokenlock::claim(name receiver) {
       ).send();
        
       iterator = _lockups.erase(iterator);
-    } else {
+    } else if (iterator != _lockups.end()){
       iterator++;
     }
   } while (iterator != _lockups.end());
