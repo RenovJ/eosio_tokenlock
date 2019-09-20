@@ -84,8 +84,10 @@ void tokenlock::claim(name receiver) {
         TOKEN_CONTRACT, "transfer"_n,
         std::make_tuple(_self, receiver, iterator->token, std::string("Token claimed"))
       ).send();
-       
-      iterator = _lockups.erase(iterator);
+
+      _lockups.modify(iterator, _self, [&](auto& row) {
+        row.claim = true;
+      });
     } else if (iterator != _lockups.end()){
       iterator++;
     }

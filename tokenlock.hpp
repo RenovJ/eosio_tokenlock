@@ -31,10 +31,13 @@ class [[eosio::contract]] tokenlock : public contract {
         string memo;
         uint64_t lock_begin = 0;
         uint64_t lock_end = 0;
+        bool claim = false;
         uint64_t primary_key() const { return no; }
+        uint64_t secondary_key() const { return receiver.value; }
     };
     
-    typedef multi_index<"lockup"_n, lockup> lockup_table;
+    typedef multi_index<"lockup"_n, lockup,
+    indexed_by<"getreceiver"_n, const_mem_fun<lockup, uint64_t, &lockup::secondary_key>>> lockup_table;
 
     lockup_table _lockups;
 };
