@@ -19,7 +19,8 @@ class [[eosio::contract]] tokenlock : public contract {
                       asset quantity,
                       string memo,
                       uint64_t unlock_timestamp);
-    [[eosio::action]] void claim(name receiver);
+    [[eosio::action]] void claim(name receiver, uint64_t no);
+    [[eosio::action]] void claimall(name receiver);
     [[eosio::action]] void currenttime();
     
   private:
@@ -31,10 +32,14 @@ class [[eosio::contract]] tokenlock : public contract {
         string memo;
         uint64_t lock_begin = 0;
         uint64_t lock_end = 0;
-        bool claim = false;
+        uint64_t claim = 0;
+        string tx_id_lockup;
+        string tx_id_claim;
         uint64_t primary_key() const { return no; }
         uint64_t secondary_key() const { return receiver.value; }
     };
+    
+    checksum256 get_trx_id();
     
     typedef multi_index<"lockup"_n, lockup,
     indexed_by<"getreceiver"_n, const_mem_fun<lockup, uint64_t, &lockup::secondary_key>>> lockup_table;

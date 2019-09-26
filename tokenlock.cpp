@@ -44,6 +44,7 @@ void tokenlock::transferlock(name from,
     l.lock_begin = current_time_point().sec_since_epoch();
     //l.lock_end = current_time_point().sec_since_epoch() + lock_days * 86400; // day in milliseconds
     l.lock_end = unlock_timestamp;
+    l.tx_id_lockup = get_trx_id();
   });
 }
   
@@ -73,7 +74,30 @@ void tokenlock::currenttime() {
   print("current time: ", current_time_point().sec_since_epoch());
 }
 
-void tokenlock::claim(name receiver) {
+void tokenlock::claim(name receiver, uint64_t no) {
+  require_auth( receiver );
+  auto iterator = _lockups.begin();
+  do {
+    if ((*iterator).no == no &&
+        (*iterator).receiver == receiver &&
+        (*iterator).lock_end < current_time_point().sec_since_epoch()) {
+      action(
+        permission_level{_self, "active"_n},
+        TOKEN_CONTRACT, "transfer"_n,
+        std::make_tuple(_self, receiver, iterator->token, std::string("Token claimed"))
+      ).send();
+
+      _lockups.modify(iterator, _self, [&](auto& row) {
+        row.claim = 1;
+        row.tx_id_claim = get_trx_id();
+      });
+      
+      break;
+    }
+  } while (++iterator != _lockups.end());
+}
+
+void tokenlock::claimall(name receiver) {
   require_auth( receiver );
   auto iterator = _lockups.begin();
   do {
@@ -86,12 +110,19 @@ void tokenlock::claim(name receiver) {
       ).send();
 
       _lockups.modify(iterator, _self, [&](auto& row) {
-        row.claim = true;
+        row.claim = 1;
+        row.tx_id_claim = get_trx_id();
       });
-    } else if (iterator != _lockups.end()){
-      iterator++;
     }
-  } while (iterator != _lockups.end());
+  } while (++iterator != _lockups.end());
 }
 
-EOSIO_DISPATCH( tokenlock, (transferlock)/*(unlock)*/(claim)(currenttime) )
+checksum256 tokenlock::get_trx_id() {
+    size_t size = transaction_size();
+    char buf[size];
+    size_t read = read_transaction( buf, size );
+    check( size == read, "read_transaction failed");
+    return sha256( buf, read );
+}
+
+EOSIO_DISPATCH( tokenlock, (transferlock)/*(unlock)*/(claim)(claimall)(currenttime) )
